@@ -1,0 +1,38 @@
+{
+  "name": "front-server",
+  "version": "0.2.0",
+  "description": "front-end dev server, use nginx style configuration",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/speakout/front-server"
+  },
+  "keywords": [
+    "front",
+    "server",
+    "nginx"
+  ],
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "bin": {
+    "front-server": "./cli.js"
+  },
+  "files": [
+    "cli.js",
+	  "index.js",
+    "package.json",
+    "README.md"
+	],
+  "author": "speakout",
+  "license": "MIT",
+  "dependencies": {
+    "http-proxy": "^1.16.2",
+    "mime": "^2.2.0",
+    "moment": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/http-proxy": "^1.16.0",
+    "@types/mime": "^2.0.0"
+  }
+}
