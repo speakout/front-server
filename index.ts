@@ -5,6 +5,8 @@ import * as mime from 'mime'
 import * as moment from 'moment'
 import * as httpProxy from 'http-proxy'
 
+const VERSION = '0.3.0'
+
 const FAVICON = `AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAApzYMAKc2DACnNgxApzYNsKc2D2ynNg9kpzYNoKc2DDSnNgwAqzoQAAAAAAAAAAAAAAAAAAAAAAAAAAAApzYMAKc2DACnOgwEpzYNQKc2DtynNg18pzYNgKc2DwynNg64pzYM/Kc2DBCnNgwAAAAAAAAAAACnNgwApzYMBKc2DKynNg4gpzYOqKc2DYSnNgxApzIIAKc2DACnNgxopzYN+Kc2DzinNg5QpzYMnKM2DACnNgwApzYMGKc2DbCnNg84pzYObKc2DiinNg9MpzYMjKc2DAAAAAAApzYMAKs+CACnNgyspzYObKc2DzSnNg2cpzYMEKc2DLinNg88pzYNRKc2EAinNgxspzYPLKc2DNCnNgw0pzYNDKc2DXinNg1UpzYMkKc2DBSnNg1UpzYPNKc2DJynNgzcpzYPEKc2DGSnNgwApzYMaKc2DyCnNg0spzYOpKc2DxSnNg6gpzYOxKc2DyynNg04pzYMcKc2DxinNgzApzYM3Kc2DxCnNgxkpzYMAKc2DGinNg8YpzYN3Kc2DsCnNgxwpzYMAKc2DCCnNg5spzYOlKc2DICnNg8YpzYMwKc2DNynNg8QpzYMZKc2DACnNgxopzYPJKc2DPinNgzQpzYNpKc2DjinNg6spzYPZKc2DcCnNgx0pzYPGKc2DMCnNgzcpzYPEKc2DGSnNgwApzYMaKc2DyCnNg0wpzYO9Kc2DxCnNg5UpzYNyKc2DWynNgxwpzYMdKc2DxinNgzApzYM3Kc2DxCnNgxkpzYMAKc2DGinNg8cpzYNdKc2D1ynNg1YpzYMQKc2DJinNg7cpzYNaKc2DGynNg8YpzYMwKc2DNynNg8QpzYMZKc2DACnNgxYpzYOrKc2DMynNg3wpzYPLKc2DwinNg8spzYOkKc2DFynNgx0pzYPGKc2DMCnNgy0pzYPPKc2DVCnNgwUpzYMCKc2DEynNgwQpzYMEKc2DIinNgzYpzYMpKc2DCCnNgwYpzYNbKc2DzSnNgyYpzYMFKc2DaCnNg84pzYOdKc2DLinNhAEpzYMAAAAAAAAAAAApzYMAKc6EASnNgzEpzYOiKc2DzCnNg2IpzYMEKc2DACnNggApzYMnKc2DlSnNg88pzYN/Kc2DGinNhAApzYMAKc2DHCnNg4MpzYPQKc2DkCnNgyQqzoMAKc2DAAAAAAAAAAAAKc2DACnNgwQpzYNAKc2DrynNg8QpzYNhKc2DZSnNg8YpzYOsKc2DPCnNgwMpzYMAAAAAAAAAAAAAAAAAAAAAAAAAAAAo0IgAKc2DACnNgw0pzYNrKc2D2SnNg9cpzYNmKc2DDCnNgwAqzoYAAAAAAAAAAAAAAAAA+B8AAOAHAACAgQAAAcAAAAAAAAAQAAAAEEAAABAAAAAQAAAAEAAAABAAAAAAAAAAA8AAAIGBAADgBwAA+B8AAA==`
 
 interface Condition {
@@ -38,7 +40,7 @@ proxyServer.on('error', (proxyRes, req, res) => {
 <head><title>502 Bad Gateway</title></head>
 <body bgcolor="white">
 <center><h1>502 Bad Gateway</h1></center>
-<hr><center>front-server</center>
+<hr><center>front-server/${VERSION}</center>
 </body>
 </html>`)
 })
@@ -80,7 +82,7 @@ class Request {
 <head><title>${code} ${message}</title></head>
 <body bgcolor="white">
 <center><h1>${code} ${message}</h1></center>
-<hr><center>front-server</center>
+<hr><center>front-server/${VERSION}</center>
 </body>
 </html>`)
   }
@@ -318,7 +320,7 @@ class Request {
           ? '?' + this.req.url.split('?')[1]
           : ''
     }
-    this.res.setHeader('Server', `front-server`)
+    this.res.setHeader('Server', `front-server/${VERSION}`)
     this.currentUri = this.vars.$uri
     let location = this.matchLocation()
     if (location !== null) {
