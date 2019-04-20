@@ -6,6 +6,7 @@
 
 ```
 listen 3000;
+auto_refresh on;
 
 location ~ ^/web/ {
   alias /www/html/;
@@ -13,6 +14,11 @@ location ~ ^/web/ {
 
 location ~ ^/(api|upload) {
   proxy_pass http://192.168.1.50:8080;
+}
+
+location ~ ^/test {
+  proxy_set_header Host www.example.com;
+  proxy_pass http://192.168.1.80;
 }
 
 location / {
@@ -71,11 +77,26 @@ npm run serve
 front-server server.conf
 ```
 
+## 自动刷新
+
+通过设置 `auto_refresh on;` 可以启用自动刷新功能，该功能监控根目录下的文件变化，然后自动刷新html页面，和hot reload机制并不相同，配置参考如下
+
+```
+listen 3000;
+auto_refresh on;
+
+location / {
+  root dist; # 根目录dist下的文件变化会受到监控
+}
+```
+
 ## 支持特性
 
 - listen
+- auto_refresh
 - location
 - root
 - alias
 - try_files
 - proxy_pass
+- proxy_set_header
