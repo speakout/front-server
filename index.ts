@@ -2,10 +2,11 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as http from 'http'
 import * as mime from 'mime'
+import * as crypto from 'crypto'
 import * as moment from 'moment'
 import * as httpProxy from 'http-proxy'
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 
 const FAVICON = `AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAApzYMAKc2DACnNgxApzYNsKc2D2ynNg9kpzYNoKc2DDSnNgwAqzoQAAAAAAAAAAAAAAAAAAAAAAAAAAAApzYMAKc2DACnOgwEpzYNQKc2DtynNg18pzYNgKc2DwynNg64pzYM/Kc2DBCnNgwAAAAAAAAAAACnNgwApzYMBKc2DKynNg4gpzYOqKc2DYSnNgxApzIIAKc2DACnNgxopzYN+Kc2DzinNg5QpzYMnKM2DACnNgwApzYMGKc2DbCnNg84pzYObKc2DiinNg9MpzYMjKc2DAAAAAAApzYMAKs+CACnNgyspzYObKc2DzSnNg2cpzYMEKc2DLinNg88pzYNRKc2EAinNgxspzYPLKc2DNCnNgw0pzYNDKc2DXinNg1UpzYMkKc2DBSnNg1UpzYPNKc2DJynNgzcpzYPEKc2DGSnNgwApzYMaKc2DyCnNg0spzYOpKc2DxSnNg6gpzYOxKc2DyynNg04pzYMcKc2DxinNgzApzYM3Kc2DxCnNgxkpzYMAKc2DGinNg8YpzYN3Kc2DsCnNgxwpzYMAKc2DCCnNg5spzYOlKc2DICnNg8YpzYMwKc2DNynNg8QpzYMZKc2DACnNgxopzYPJKc2DPinNgzQpzYNpKc2DjinNg6spzYPZKc2DcCnNgx0pzYPGKc2DMCnNgzcpzYPEKc2DGSnNgwApzYMaKc2DyCnNg0wpzYO9Kc2DxCnNg5UpzYNyKc2DWynNgxwpzYMdKc2DxinNgzApzYM3Kc2DxCnNgxkpzYMAKc2DGinNg8cpzYNdKc2D1ynNg1YpzYMQKc2DJinNg7cpzYNaKc2DGynNg8YpzYMwKc2DNynNg8QpzYMZKc2DACnNgxYpzYOrKc2DMynNg3wpzYPLKc2DwinNg8spzYOkKc2DFynNgx0pzYPGKc2DMCnNgy0pzYPPKc2DVCnNgwUpzYMCKc2DEynNgwQpzYMEKc2DIinNgzYpzYMpKc2DCCnNgwYpzYNbKc2DzSnNgyYpzYMFKc2DaCnNg84pzYOdKc2DLinNhAEpzYMAAAAAAAAAAAApzYMAKc6EASnNgzEpzYOiKc2DzCnNg2IpzYMEKc2DACnNggApzYMnKc2DlSnNg88pzYN/Kc2DGinNhAApzYMAKc2DHCnNg4MpzYPQKc2DkCnNgyQqzoMAKc2DAAAAAAAAAAAAKc2DACnNgwQpzYNAKc2DrynNg8QpzYNhKc2DZSnNg8YpzYOsKc2DPCnNgwMpzYMAAAAAAAAAAAAAAAAAAAAAAAAAAAAo0IgAKc2DACnNgw0pzYNrKc2D2SnNg9cpzYNmKc2DDCnNgwAqzoYAAAAAAAAAAAAAAAAA+B8AAOAHAACAgQAAAcAAAAAAAAAQAAAAEEAAABAAAAAQAAAAEAAAABAAAAAAAAAAA8AAAIGBAADgBwAA+B8AAA==`
 
@@ -26,10 +27,69 @@ interface Location {
 
 interface Config {
   port: number
+  auto_refresh: string
   locations: Location[]
 }
 
+interface RefreshConfig {
+  id: string
+  client: string
+  enabled: boolean
+  res: http.ServerResponse[]
+}
+
 let config: Config
+let refresh_config: RefreshConfig = {
+  id: '',
+  client: '',
+  enabled: false,
+  res: []
+}
+
+function autoRefresh(content: string) {
+  try {
+    refresh_config.id = crypto
+      .createHash('sha1')
+      .update(content)
+      .digest()
+      .toString('hex')
+    refresh_config.client = fs
+      .readFileSync(path.join(__dirname, './client.js'), 'utf-8')
+      .replace('server_api', `/refreshapi/${refresh_config.id}`)
+    let root: string = null
+    config.locations.forEach(item => {
+      if (item.condition.operator === '' && item.condition.value === '/') {
+        item.actions.forEach(action => {
+          if (action.name === 'root') root = action.value[0]
+        })
+      }
+    })
+    if (root === null) return
+    let files: string[] = []
+    let timer: any
+    let id = 1
+    fs.watch(root, { recursive: true }, (event, file) => {
+      files.push(file.replace(/\\/g, '/'))
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        refresh_config.res.forEach(res => {
+          try {
+            res.write(
+              `id:${id++}\nevent:update\ndata:${JSON.stringify({
+                time: Date.now(),
+                files
+              })}\nretry:3000\n\n`
+            )
+          } catch (error) {}
+        })
+        files = []
+      }, 100)
+    })
+    refresh_config.enabled = true
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 let proxyServer = httpProxy.createProxyServer({})
 
@@ -149,12 +209,29 @@ class Request {
       }
       let type = mime.getType(filePath) || 'application/octet-stream'
       this.res.setHeader('Content-Type', type)
-      this.res.setHeader('Content-Length', size)
-      fs.createReadStream(filePath)
-        .on('error', error => {
-          this.err(500, 'Internal Server Error')
+      if (refresh_config.enabled === true && filePath.endsWith('.html')) {
+        fs.readFile(filePath, 'utf-8', (err, data) => {
+          if (err) {
+            this.err(500, 'Internal Server Error')
+          } else {
+            let exp = /(<title>.*<\/title>)/
+            let result = data.replace(
+              exp,
+              `$1\r\n  <script src="/refreshjs/${
+                refresh_config.id
+              }.js"></script>`
+            )
+            this.res.end(result)
+          }
         })
-        .pipe(this.res)
+      } else {
+        this.res.setHeader('Content-Length', size)
+        fs.createReadStream(filePath)
+          .on('error', error => {
+            this.err(500, 'Internal Server Error')
+          })
+          .pipe(this.res)
+      }
       this.logger('->', filePath.replace(/\\/g, '/'))
     } catch (error) {
       this.err(500, 'Internal Server Error')
@@ -363,6 +440,20 @@ class Parser {
   }
 
   /**
+   * parse auto refresh switch
+   */
+  private getAutoRefresh() {
+    let value = 'off'
+    let str = this.content.trim()
+    let exp = /auto_refresh\s*(on|off);/
+    let result = str.match(exp)
+    if (result !== null) {
+      value = result[1]
+    }
+    return value
+  }
+
+  /**
    * parse locations
    * @param str
    */
@@ -458,10 +549,12 @@ class Parser {
    */
   parse() {
     let port = this.getPort()
+    let auto_refresh = this.getAutoRefresh()
     let locations = this.getLocationGroup()
     return {
-      port: port,
-      locations: locations
+      port,
+      auto_refresh,
+      locations
     }
   }
 
@@ -478,8 +571,35 @@ module.exports = {
   start(conf: string) {
     let content = fs.readFileSync(conf, 'utf-8')
     config = new Parser(content).parse()
-
+    if (config.auto_refresh === 'on') {
+      autoRefresh(content)
+    }
     let server = http.createServer((req, res) => {
+      if (config.auto_refresh === 'on') {
+        if (req.url.startsWith(`/refreshapi/${refresh_config.id}`)) {
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Server: `front-server/${VERSION}`,
+            Connection: 'keep-alive'
+          })
+          res.flushHeaders()
+          refresh_config.res.push(res)
+          req.on('close', () => {
+            refresh_config.res = refresh_config.res.filter(item => item !== res)
+          })
+          return
+        }
+        if (req.url.startsWith(`/refreshjs/${refresh_config.id}.js`)) {
+          res.writeHead(200, {
+            'Content-Type': 'application/javascript',
+            'Content-Length': refresh_config.client.length,
+            Server: `front-server/${VERSION}`
+          })
+          res.end(refresh_config.client)
+          return
+        }
+      }
       let request = new Request(req, res)
       request.parse()
     })

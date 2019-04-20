@@ -1,6 +1,6 @@
 {
   "name": "front-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "front-end dev server, use nginx style configuration",
   "main": "index.js",
   "repository": {
@@ -21,6 +21,7 @@
   "files": [
     "cli.js",
 	  "index.js",
+    "client.js",
     "package.json",
     "README.md"
 	],
