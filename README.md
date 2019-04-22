@@ -90,6 +90,10 @@ location / {
 }
 ```
 
+## Cookie处理
+
+反向代理会自动清除cookie的domain，并将path置为 /
+
 ## 支持特性
 
 - listen
